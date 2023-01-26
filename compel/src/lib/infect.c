@@ -66,6 +66,7 @@ static int parse_pid_status(int pid, struct seize_task_status *ss, void *data)
 
 	ss->ppid = -1; /* Not needed at this point */
 	ss->seccomp_mode = SECCOMP_MODE_DISABLED;
+	ss->syscall_user_dispatch = 0;
 
 	while (fgets(aux, sizeof(aux), f)) {
 		if (!strncmp(aux, "State:", 6)) {
@@ -75,6 +76,13 @@ static int parse_pid_status(int pid, struct seize_task_status *ss, void *data)
 
 		if (!strncmp(aux, "Seccomp:", 8)) {
 			if (sscanf(aux + 9, "%d", &ss->seccomp_mode) != 1)
+				goto err_parse;
+
+			continue;
+		}
+
+		if (!strncmp(aux, "Syscall_user_dispatch:", 22)) {
+			if (sscanf(aux + 9, "%d", &ss->syscall_user_dispatch) != 1)
 				goto err_parse;
 
 			continue;
@@ -309,8 +317,11 @@ try_again:
 		return -1;
 	}
 
-	if (ss->seccomp_mode != SECCOMP_MODE_DISABLED && ptrace_suspend_seccomp(pid) < 0)
-		goto err;
+	if ((ss->seccomp_mode != SECCOMP_MODE_DISABLED) ||
+	    (ss->syscall_user_dispatch)) {
+		if (ptrace_suspend_intercepts(pid) < 0)
+			goto err;
+	}
 
 	/*
 	 * FIXME(issues/1429): parasite code contains instructions that trigger

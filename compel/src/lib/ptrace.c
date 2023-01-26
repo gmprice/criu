@@ -21,10 +21,15 @@
 
 #include "log.h"
 
-int ptrace_suspend_seccomp(pid_t pid)
+#ifndef PTRACE_O_SUSPEND_SYSCALL_USER_DISPATCH
+#define PTRACE_O_SUSPEND_SYSCALL_USER_DISPATCH (1 << 22)
+#endif
+
+int ptrace_suspend_intercepts(pid_t pid)
 {
-	if (ptrace(PTRACE_SETOPTIONS, pid, NULL, PTRACE_O_SUSPEND_SECCOMP | PTRACE_O_TRACESYSGOOD) < 0) {
-		pr_perror("suspending seccomp failed");
+	long options = (PTRACE_O_SUSPEND_SECCOMP | PTRACE_O_SUSPEND_SYSCALL_USER_DISPATCH);
+	if (ptrace(PTRACE_SETOPTIONS, pid, NULL, (options | PTRACE_O_TRACESYSGOOD) < 0)) {
+		pr_perror("suspending seccomp and/or syscall user dispatch failed");
 		return -1;
 	}
 

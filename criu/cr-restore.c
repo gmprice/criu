@@ -812,6 +812,13 @@ static int open_cores(int pid, CoreEntry *leader_core)
 			break;
 		}
 	}
+	for (i = 0; i < current->nr_threads; i++) {
+		ThreadCoreEntry *thread_core = cores[i]->thread_core;
+		if (thread_core->has_syscall_user_dispatch) {
+			rsti(current)->has_syscall_user_dispatch = true;
+			break;
+		}
+	}
 
 	for (i = 0; i < current->nr_threads; i++) {
 		ThreadCoreEntry *tc = cores[i]->thread_core;
@@ -951,6 +958,9 @@ static int restore_one_alive_task(int pid, CoreEntry *core)
 		return -1;
 
 	if (seccomp_prepare_threads(current, ta) < 0)
+		return -1;
+
+	if (sud_prepare_threads(current, ta) < 0)
 		return -1;
 
 	if (prepare_itimers(pid, ta, core) < 0)
@@ -1375,6 +1385,7 @@ static inline int fork_with_pid(struct pstree_item *item)
 		 * this flag as appropriate.
 		 */
 		rsti(item)->has_seccomp = false;
+		rsti(item)->has_syscall_user_dispatch = false;
 
 		if (unlikely(item == root_item))
 			maybe_clone_parent(item, &ca);
@@ -1985,8 +1996,12 @@ static int attach_to_tasks(bool root_seized)
 			 * restorer blob (and the final sigreturn is ok), here we're
 			 * doing an munmap in the process, which may be blocked by
 			 * seccomp and cause the task to be killed.
+			 *
+			 * Similarly with syscall user dispatch, we need to prevent
+			 * syscall interception during restoration
 			 */
-			if (rsti(item)->has_seccomp && ptrace_suspend_seccomp(pid) < 0)
+			if ((rsti(item)->has_seccomp || rsti(item)->has_syscall_user_dispatch) &&
+					ptrace_suspend_intercepts(pid) < 0)
 				pr_err("failed to suspend seccomp, restore will probably fail...\n");
 
 			if (ptrace(PTRACE_CONT, pid, NULL, NULL)) {

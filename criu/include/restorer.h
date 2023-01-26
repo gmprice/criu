@@ -120,6 +120,8 @@ struct thread_restore_args {
 	unsigned int seccomp_filters_n;
 	bool seccomp_force_tsync;
 
+	bool has_syscall_user_dispatch;
+
 	char comm[TASK_COMM_LEN];
 	int cg_set;
 	int cgroupd_sk;
@@ -214,6 +216,7 @@ struct task_restore_args {
 	int proc_fd;
 
 	int seccomp_mode;
+	bool has_syscall_user_dispatch;
 
 	bool compatible_mode;
 

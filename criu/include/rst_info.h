@@ -73,6 +73,13 @@ struct rst_info {
 	 */
 	bool has_old_seccomp_filter;
 
+	/*
+	 * We set this flag when process has syscall user dispatch
+	 * so that we know to restore it before we unmap the
+	 * restorer blob.
+	 */
+	bool has_syscall_user_dispatch;
+
 	bool has_thp_enabled;
 
 	struct rst_rseq *rseqe;

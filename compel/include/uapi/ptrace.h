@@ -86,7 +86,7 @@ struct __ptrace_rseq_configuration {
 #define PTRACE_EVENT_STOP 128
 #endif
 
-extern int ptrace_suspend_seccomp(pid_t pid);
+extern int ptrace_suspend_intercepts(pid_t pid);
 
 extern int __must_check ptrace_peek_area(pid_t pid, void *dst, void *addr, long bytes);
 extern int __must_check ptrace_poke_area(pid_t pid, void *src, void *addr, long bytes);

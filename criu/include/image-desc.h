@@ -116,6 +116,8 @@ enum {
 
 	CR_FD_AUTOFS,
 
+	CR_FD_SYSCALL_USER_DISPATCH,
+
 	CR_FD_MAX
 };
 

@@ -766,6 +766,32 @@ static int check_ptrace_suspend_seccomp(void)
 	return ret;
 }
 
+#ifndef PTRACE_O_SUSPEND_SYSCALL_USER_DISPATCH
+#define PTRACE_O_SUSPEND_SYSCALL_USER_DISPATCH (1 << 22)
+#endif
+static int check_ptrace_suspend_sud(void)
+{
+	pid_t pid;
+	int ret = 0;
+
+	pid = fork_and_ptrace_attach(NULL);
+	if (pid < 0)
+		return -1;
+
+	if (ptrace(PTRACE_SETOPTIONS, pid, NULL, PTRACE_O_SUSPEND_SYSCALL_USER_DISPATCH) < 0) {
+		if (errno == EINVAL) {
+			pr_err("Kernel doesn't support PTRACE_O_SUSPEND_SYSCALL_USER_DISPATCH\n");
+		} else {
+			pr_perror("couldn't suspend seccomp");
+		}
+		ret = -1;
+	}
+
+	kill(pid, SIGKILL);
+	waitpid(pid, NULL, 0);
+	return ret;
+}
+
 static int setup_seccomp_filter(void)
 {
 	struct sock_filter filter[] = {
@@ -1494,6 +1520,7 @@ int cr_check(void)
 		ret |= check_move_mount_set_group();
 		ret |= check_openat2();
 		ret |= check_ptrace_get_rseq_conf();
+		ret |= check_ptrace_suspend_sud();
 
 		if (kdat.lsm == LSMTYPE__APPARMOR)
 			ret |= check_apparmor_stacking();
@@ -1614,6 +1641,7 @@ static struct feature_list feature_list[] = {
 	{ "move_mount_set_group", check_move_mount_set_group },
 	{ "openat2", check_openat2 },
 	{ "get_rseq_conf", check_ptrace_get_rseq_conf },
+	{ "sud_suspend", check_ptrace_suspend_sud },
 	{ NULL, NULL },
 };
 
